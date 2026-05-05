@@ -1,11 +1,9 @@
 import { Log } from "../logging_middleware";
-import { apiClient, getAuthHeaders } from "../config/axios";
+import { apiClient } from "../config/axios";
 import type { Vehicle, VehiclesResponse } from "../types";
 
 export async function fetchVehicles(): Promise<Vehicle[]> {
-  const response = await apiClient.get<VehiclesResponse>("/vehicles", {
-    headers: getAuthHeaders(),
-  });
+  const response = await apiClient.get<VehiclesResponse>("/vehicles");
 
   await Log("backend", "info", "service", "vehicles fetched");
 

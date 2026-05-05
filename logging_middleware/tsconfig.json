@@ -3,6 +3,7 @@
     "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "ignoreDeprecations": "5.0",
     "lib": ["ES2020"],
     "rootDir": ".",
     "outDir": "dist",
@@ -14,10 +15,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "logging_middleware/index.ts",
-    "logging_middleware/logger.ts",
-    "logging_middleware/src/**/*.ts"
-  ],
+  "include": ["index.ts", "logger.ts", "src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

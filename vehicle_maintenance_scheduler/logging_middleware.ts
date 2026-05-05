@@ -1,4 +1,6 @@
-import axios from "axios";
+import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+
+import { clearAuthToken, getAuthToken } from "./src/services/auth.service";
 
 const STACK_VALUES = ["backend", "frontend"] as const;
 const LEVEL_VALUES = ["debug", "info", "warn", "error", "fatal"] as const;
@@ -31,19 +33,16 @@ const allowedPackagesByStack = {
   frontend: [...FRONTEND_PACKAGES, ...SHARED_PACKAGES],
 } as const;
 
-const logClient = axios.create({
-  baseURL: LOG_API_BASE_URL,
-  timeout: LOG_TIMEOUT_MS,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
 type Stack = (typeof STACK_VALUES)[number];
 type LogLevel = (typeof LEVEL_VALUES)[number];
 type AllowedPackage<S extends Stack> = S extends "backend"
   ? (typeof BACKEND_PACKAGES)[number] | (typeof SHARED_PACKAGES)[number]
   : (typeof FRONTEND_PACKAGES)[number] | (typeof SHARED_PACKAGES)[number];
+
+type AuthenticatedRequest = AxiosRequestConfig & {
+  _retry?: boolean;
+  headers?: unknown;
+};
 
 function isOneOf<T extends string>(
   value: string,
@@ -52,10 +51,19 @@ function isOneOf<T extends string>(
   return values.includes(value as T);
 }
 
-function getToken(): string | null {
-  const token = process.env.LOG_TOKEN?.trim();
+function withAuthorizationHeader(headers: unknown, token: string): unknown {
+  if (headers && typeof (headers as { set?: unknown }).set === "function") {
+    (headers as { set: (name: string, value: string) => void }).set(
+      "Authorization",
+      token,
+    );
+    return headers;
+  }
 
-  return token || null;
+  return {
+    ...(headers as Record<string, unknown>),
+    Authorization: token,
+  };
 }
 
 function validateLogInput<S extends Stack>(
@@ -81,6 +89,51 @@ function validateLogInput<S extends Stack>(
   }
 }
 
+const logClient: AxiosInstance = axios.create({
+  baseURL: LOG_API_BASE_URL,
+  timeout: LOG_TIMEOUT_MS,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+logClient.interceptors.request.use(async (config) => {
+  const token = await getAuthToken();
+
+  config.headers = withAuthorizationHeader(
+    config.headers,
+    token,
+  ) as typeof config.headers;
+
+  return config;
+});
+
+logClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as AuthenticatedRequest | undefined;
+
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+      clearAuthToken();
+
+      const token = await getAuthToken();
+      originalRequest.headers = withAuthorizationHeader(
+        originalRequest.headers,
+        token,
+      ) as AxiosRequestConfig["headers"];
+
+      return logClient.request(originalRequest as AxiosRequestConfig);
+    }
+
+    return Promise.reject(error);
+  },
+);
+
 export async function Log<S extends Stack>(
   stack: S,
   level: LogLevel,
@@ -90,29 +143,12 @@ export async function Log<S extends Stack>(
   try {
     validateLogInput(stack, level, packageName, message);
 
-    const token = getToken();
-
-    if (!token) {
-      console.error(
-        "[logging_middleware] Logging skipped because LOG_TOKEN is missing.",
-      );
-      return;
-    }
-
-    await logClient.post(
-      LOG_API_PATH,
-      {
-        stack,
-        level,
-        package: packageName,
-        message,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    );
+    await logClient.post(LOG_API_PATH, {
+      stack,
+      level,
+      package: packageName,
+      message,
+    });
   } catch (error) {
     if (error instanceof Error) {
       console.error(`[logging_middleware] ${error.message}`);

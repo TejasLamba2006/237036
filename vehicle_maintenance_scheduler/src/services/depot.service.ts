@@ -1,11 +1,9 @@
 import { Log } from "../logging_middleware";
-import { apiClient, getAuthHeaders } from "../config/axios";
+import { apiClient } from "../config/axios";
 import type { Depot, DepotsResponse } from "../types";
 
 export async function fetchDepots(): Promise<Depot[]> {
-  const response = await apiClient.get<DepotsResponse>("/depots", {
-    headers: getAuthHeaders(),
-  });
+  const response = await apiClient.get<DepotsResponse>("/depots");
 
   await Log("backend", "info", "service", "depots fetched");
 

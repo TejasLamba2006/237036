@@ -7,10 +7,6 @@ import {
 } from "./constants";
 import type { AllowedPackageForStack, LogLevel, Stack } from "./types";
 
-declare const process: {
-  env: Record<string, string | undefined>;
-};
-
 declare const console: {
   error: (...args: unknown[]) => void;
 };
@@ -24,12 +20,6 @@ export function isOneOf<T extends string>(
 
 export function isNonEmptyText(value: string): boolean {
   return value.trim().length > 0;
-}
-
-export function getLogToken(): string | null {
-  const token = process.env.LOG_TOKEN?.trim();
-
-  return token || null;
 }
 
 export function describeFailure(error: unknown): string {
