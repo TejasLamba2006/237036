@@ -19,7 +19,6 @@ export async function getSchedule(
     });
   } catch (error) {
     await Log("backend", "error", "handler", "failed to generate schedule");
-    console.error("Failed to generate maintenance schedule", error);
 
     return response.status(500).json({
       success: false,

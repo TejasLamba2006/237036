@@ -21,8 +21,3 @@ export {
   SHARED_PACKAGES,
   STACK_VALUES,
 } from "./src";
-
-/*
-exmaple:
-await Log("backend", "info", "service", "Vehicle data fetched successfully");
-*/

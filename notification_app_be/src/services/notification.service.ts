@@ -1,4 +1,3 @@
-import { Log } from "../logging_middleware";
 import type { CreateNotificationInput, Notification } from "../types";
 import {
   addNotification,
@@ -67,3 +66,5 @@ export async function syncNotifications(): Promise<Notification[]> {
 
   return replaceNotifications(merged);
 }
+
+export { getTop10ExternalNotifications } from "./stage6.service";
