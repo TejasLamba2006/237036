@@ -1,3 +1,4 @@
+import "dotenv/config";
 export { Log } from "./src";
 export type {
   AllowedPackage,
